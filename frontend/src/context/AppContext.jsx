@@ -16,6 +16,5 @@ const AppContextProvider = (props) =>{
             {props.children}
         </AppContext.Provider>
     )
-}
-;
+};
 export default AppContextProvider
