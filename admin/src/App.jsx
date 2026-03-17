@@ -9,6 +9,7 @@ import { Routes, Route } from 'react-router-dom';
 import Dashboard from './pages/Admin/Dashboard';
 import AllAppointments from './pages/Admin/AllAppointments';
 import DoctorsList from './pages/Admin/DoctorsList';
+import AddDoctor from './pages/Admin/AddDoctor';
 
 function App() {
   
@@ -25,6 +26,7 @@ function App() {
           <Route path='/admin-dashboard' element={<Dashboard/>}></Route>
           <Route path='/all-appointments' element={<AllAppointments/>}></Route>
           <Route path='/doctor-list' element={<DoctorsList/>}></Route>
+          <Route path='/add-doctor' element={<AddDoctor/>}></Route>
         </Routes>
       </div>
     </div>
