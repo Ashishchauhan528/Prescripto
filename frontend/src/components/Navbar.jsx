@@ -3,14 +3,21 @@ import {assets} from '../assets/assets'
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
+import { useContext } from 'react';
+import { AppContext } from '../context/AppContext';
 
 const Navbar = ()=>{
     const navigate = useNavigate();
+    const {token, setToken} = useContext(AppContext);
     const location = useLocation();
 
     const [showMenu, setShowMenu] = useState(false)
-    const [token, setToken] = useState(true)
     const [showDropdown, setShowDropdown] = useState(false);
+
+    const logout = ()=>{
+        setToken(false)
+        localStorage.removeItem('token')
+    }
 
     useEffect(() => {
         setShowDropdown(false);
@@ -46,7 +53,7 @@ const Navbar = ()=>{
             <div className="absolute right-0 mt-45 w-48 bg-white shadow-lg rounded-lg border border-gray-200 z-50">
                 <p onClick={()=>{navigate('/my-profile'); setShowDropdown(false)}} className="px-4 py-2 hover:bg-gray-100 cursor-pointer">My Profile</p>
                 <p onClick={()=>{navigate('/my-appointments'); setShowDropdown(false)}} className="px-4 py-2 hover:bg-gray-100 cursor-pointer">My Appointments</p>
-                <p onClick={()=>{setToken(false); setShowDropdown(false)}} className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-red-500">Logout</p>
+                <p onClick={()=>{logout(); setShowDropdown(false)}} className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-red-500">Logout</p>
             </div>
             )}
                     </div>
