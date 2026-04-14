@@ -3,13 +3,16 @@ import { AppContext } from '../context/AppContext';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import { useNavigate } from 'react-router-dom';
 
 const MyAppointments = ()=>{
 
-    const {backendUrl, token} = useContext(AppContext)
+    const {backendUrl, token, getDoctorsData} = useContext(AppContext)
 
     const [appointments, setAppointments] = useState([]);
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+    const navigate = useNavigate();
 
     const slotDateFormat = (slotDate)=>{
         const dateArray = slotDate.split('_')
@@ -34,6 +37,119 @@ const MyAppointments = ()=>{
             toast.error(error.message);
         }
     }
+
+    const cancelAppointment = async(appointmentId)=>{
+        try{
+            const {data} = await axios.post(backendUrl + '/api/user/cancel-appointment', {appointmentId}, {headers: {
+                    Authorization: `Bearer ${token}`}
+            });
+            if(data.success){
+                toast.success(data.message);
+                getUserAppointments();
+                getDoctorsData();
+            }
+            else{
+                toast.error(data.message);
+            }
+        }catch(error){
+            console.log(error);
+            toast.error(error.message);
+        }
+    }
+
+    const initPay = (order, appointmentId) => {
+    const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+        amount: order.amount,
+        currency: order.currency,
+        name: "Appointment Payment",
+        description: "Payment for doctor appointment",
+        order_id: order.id,
+
+        // Better UX
+        prefill: {
+            name: "User",
+            email: "user@email.com"
+        },
+
+        // success handler
+        handler: async (response) => {
+            try {
+                console.log("RAZORPAY RESPONSE:", response);
+
+                const { data } = await axios.post(
+                    backendUrl + "/api/user/verifyRazorpay",
+                    {
+                        razorpay_order_id: response.razorpay_order_id,
+                        razorpay_payment_id: response.razorpay_payment_id,
+                        razorpay_signature: response.razorpay_signature,
+                        appointmentId
+                    },
+                    {
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        }
+                    }
+                );
+
+                if (data.success) {
+                    toast.success("Payment Verified");
+                    getUserAppointments();
+                    navigate('/my-appointments');
+                } else {
+                    toast.error(data.message || "Verification Failed");
+                }
+
+            } catch (error) {
+                console.log(error);
+                toast.error("Server Error during verification");
+            }
+        },
+
+        //IMPORTANT: handle failure
+        modal: {
+            ondismiss: function () {
+                toast.error("Payment cancelled by user");
+            }
+        }
+    };
+
+    const rzp = new window.Razorpay(options);
+
+    //handle payment failure
+    rzp.on("payment.failed", function (response) {
+        console.log("PAYMENT FAILED:", response);
+        toast.error("Payment Failed ");
+    });
+
+    rzp.open();
+};
+
+
+const appointmentRazorpay = async (appointmentId) => {
+    try {
+        const { data } = await axios.post(
+            backendUrl + '/api/user/payment-razorpay',
+            { appointmentId },
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            }
+        );
+
+        if (data.success) {
+            console.log("ORDER:", data.order); // keep this for now
+            initPay(data.order, appointmentId);
+        } else {
+            toast.error(data.message);
+        }
+
+    } catch (error) {
+        console.log(error);
+        toast.error(error.message);
+    }
+};
 
     useEffect(()=>{
 if(token){
@@ -61,8 +177,9 @@ if(token){
                         </div>
                         <div></div>
                         <div className='flex flex-col gap-2 justify-end'>
-                            <button className='text-sm text-stone-500 text-center sm:min-w-48 py-2 border rounded hover:bg-primary hover:text-white transition-all duration-300'>Pay Online</button>
-                            <button className='text-sm text-stone-500 text-center sm:min-w-48 py-2 border rounded hover:bg-red-600 hover:text-white transition-all duration-300'>Cancel Appointment</button>
+                            {!item.cancelled && <button onClick={()=>appointmentRazorpay(item._id)} className='text-sm text-stone-500 text-center sm:min-w-48 py-2 border rounded hover:bg-primary hover:text-white transition-all duration-300'>Pay Online</button>}
+                            {!item.cancelled && <button onClick={()=>cancelAppointment(item._id)} className='text-sm text-stone-500 text-center sm:min-w-48 py-2 border rounded hover:bg-red-600 hover:text-white transition-all duration-300'>Cancel Appointment</button>}
+                            {item.cancelled && <button className='sm:min-w-48 py-2 border border-red-500 rounded text-red-500'>Appointment Cancelled</button>}
                         </div>
                     </div>
                 ))}
